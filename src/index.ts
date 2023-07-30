@@ -5,7 +5,7 @@ import { swagger } from "@elysiajs/swagger"
 import { getPoolInfo } from "./query/getPoolInfo"
 import { cors } from "@elysiajs/cors"
 
-const client = await CosmWasmClient.connect("https://sei.kingnodes.com")
+const client = await CosmWasmClient.connect("https://rpc-sei-testnet.rhinostake.com/")
 
 const app = new Elysia()
 	.use(
