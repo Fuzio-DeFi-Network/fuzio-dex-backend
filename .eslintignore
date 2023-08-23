@@ -21,3 +21,5 @@ README.md
 .env.development.local
 .env.test.local
 .env.production.local
+
+barrelsby.json

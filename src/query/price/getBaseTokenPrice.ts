@@ -1,11 +1,10 @@
-import { type Pool } from "../types"
-import { stablePoolId } from "../utils/helpers"
-import { poolListUrl } from "../utils/urls"
 import { type CosmWasmClient } from "@cosmjs/cosmwasm-stargate"
 import { contracts } from "@fuzio/contracts"
+import { type Pool } from "@type/model"
+import { poolListUrl, stablePoolId } from "@utils/constants"
 import { BigNumber } from "bignumber.js"
 
-export const getFuzioPrice = async (client: CosmWasmClient) => {
+export const getBaseTokenPrice = async (client: CosmWasmClient) => {
 	try {
 		const poolListResponse = await fetch(poolListUrl)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any

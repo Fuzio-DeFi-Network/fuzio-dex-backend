@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./src",
+    "paths": {
+      "@query/*": ["query/*"],
+      "@utils/*": ["utils/*"],
+      "@type/*": ["types/*"],
+      "@errors/*": ["errors/*"],
+      "@calculations/*": ["calculations/*"]
+    }
+  }
+}

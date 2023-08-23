@@ -1,0 +1,9 @@
+{
+  "directory": ["./src/query", "./src/utils", "./src/types", "./src/calculation", "./src/errors"],
+  "local": true,
+  "structure": "flat",
+  "noSemicolon": true,
+  "location": "all",
+  "noHeader": true,
+  "delete": true
+}

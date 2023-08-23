@@ -1,19 +1,20 @@
-import { getFuzioPrice } from "./query/getFuzioPrice"
-import { getPoolById } from "./query/getPoolById"
-import { getPoolList } from "./query/getPoolList"
-import { CosmWasmClient } from "@cosmjs/cosmwasm-stargate"
+import { staticPlugin } from "@elysiajs/static"
 import { swagger } from "@elysiajs/swagger"
+import { refreshTokenAndPools } from "@query/cache"
+import { generateOGImage } from "@query/og/generateOGImage"
+import { getBaseTokenPrice } from "@query/price"
+import {
+	type PoolKeys,
+	type PoolWithDataKeys,
+	type TokenKeys
+} from "@type/model"
+import { cacheManagerInstance } from "@utils/cache"
+import { launchStyle } from "@utils/cli/styles"
+import { client } from "@utils/clients/cosmWasmClient"
+// import { cron } from "@utils/helpers"
 import { Elysia } from "elysia"
 
-const client = await CosmWasmClient.connect({
-	headers: {
-		"x-apikey": process.env.SEIAPISKEY ?? ""
-	},
-	url:
-		process.env.SEI_NETWORK === "MAINNET"
-			? "https://rpc.sei-apis.com"
-			: "https://rpc-testnet.sei-apis.com"
-})
+await refreshTokenAndPools()
 
 const app = new Elysia()
 	.get(
@@ -39,11 +40,26 @@ const app = new Elysia()
                 '---'
 `
 	)
-	.get("/poolList", async () => await getPoolList(client))
-	.get("/fuzioPrice", async () => await getFuzioPrice(client))
+	.get("/poolList", () => cacheManagerInstance.getPoolList())
+	.get("/poolData", async () => cacheManagerInstance.getPoolListWithData())
+	.get("/tokenList", async () => cacheManagerInstance.getTokenList())
+	.get("/baseTokenPrice", async () => await getBaseTokenPrice(client))
+	.get("/poolData/:property/:value", async ({ params: { property, value } }) =>
+		cacheManagerInstance.getPoolWithDataByProperty(
+			property as PoolWithDataKeys,
+			value
+		)
+	)
+	.get("/pool/:property/:value", async ({ params: { property, value } }) =>
+		cacheManagerInstance.getPoolByProperty(property as PoolKeys, value)
+	)
+	.get("/token/:property/:value", async ({ params: { property, value } }) => {
+		return cacheManagerInstance.getTokenByProperty(property as TokenKeys, value)
+	})
 	.get(
-		"/pool/:id",
-		async ({ params: { id } }) => await getPoolById(client, Number(id))
+		"/og/:type/:value",
+		async ({ params: { type, value } }) =>
+			await generateOGImage(type as "default" | "pool" | "swap", value)
 	)
 	.use(
 		swagger({
@@ -60,6 +76,25 @@ const app = new Elysia()
 			}
 		})
 	)
+	.use(staticPlugin({}))
+	// .use(
+	// 	cron({
+	// 		name: "Refresh Token & Pool List",
+	// 		pattern: "*/5 * * * * *",
+	// 		async run() {
+	// 			await refreshTokenAndPools()
+	// 		}
+	// 	})
+	// )
+	// .use(
+	// 	cron({
+	// 		name: "Refresh Cached Data",
+	// 		pattern: "*/5 * * * * *",
+	// 		async run() {
+	// 			await refreshData()
+	// 		}
+	// 	})
+	// )
 	.onError(({ code, set }) => {
 		if (code === "NOT_FOUND") {
 			set.status = 404
@@ -87,6 +122,9 @@ const app = new Elysia()
 	.listen(process.env.BUNPORT ?? 3_000)
 
 // eslint-disable-next-line no-console
+
 console.log(
-	`🦎 Fuzio DEX Microservice started at ${app.server?.hostname}:${app.server?.port}`
+	launchStyle.Render(
+		`🦎 Fuzio DEX Microservice started at ${app.server?.hostname}:${app.server?.port}`
+	)
 )

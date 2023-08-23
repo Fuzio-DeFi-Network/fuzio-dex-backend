@@ -9,6 +9,8 @@
     	"canonical"
   	],
 	"rules": {
+		"import/no-cycle": "off",
+		"no-console": "off",
 		"prettier/prettier": [
     		"error",
    			{

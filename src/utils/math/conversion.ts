@@ -17,5 +17,3 @@ export const convertDenomToMicroDenom = (
 	const bnValue = BigNumber(value)
 	return bnValue.multipliedBy(BigNumber(10).pow(decimals))
 }
-
-export const stablePoolId = process.env.SEI_NETWORK === "MAINNET" ? 0 : 1
