@@ -128,7 +128,7 @@ const app = new Elysia()
 			return "Unknown Error :("
 		}
 	})
-	.listen(process.env.BUNPORT ?? 3_000)
+	.listen({ port: process.env.BUNPORT ?? 3_000 })
 
 console.log(
 	launchStyle.Render(
