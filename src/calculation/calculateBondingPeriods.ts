@@ -3,21 +3,23 @@ import { updateBondingPeriod } from "./updateBondingPeriod"
 import { type CosmWasmClient } from "@cosmjs/cosmwasm-stargate"
 import { contracts } from "@fuzio/contracts"
 import { type InfoResponse } from "@fuzio/contracts/types/FuzioPool.types"
-import { type BondingPeriod, type Pool } from "@type/model"
-import { BigNumber } from "bignumber.js"
+import { type BondingPeriod, type Pool, type Token } from "@type/model"
+import { type BigNumber } from "bignumber.js"
 
 const {
-	FuzioStaking: { FuzioStakingQueryClient },
-	Cw20: { Cw20QueryClient }
+	FuzioStaking: { FuzioStakingQueryClient }
 } = contracts
 
 export const calculateBondingPeriods = async (
 	client: CosmWasmClient,
 	pool: Pool,
-	poolInfo: InfoResponse
+	poolInfo: InfoResponse,
+	tokenOnePrice: BigNumber,
+	tokenTwoPrice: BigNumber,
+	token1: Token,
+	token2: Token
 ): Promise<BondingPeriod[] | undefined> => {
 	const bondingPeriods: BondingPeriod[] = []
-	const lpQueryClient = new Cw20QueryClient(client, poolInfo.lp_token_address)
 
 	if (!pool.bondingPeriods) {
 		return undefined
@@ -29,9 +31,6 @@ export const calculateBondingPeriods = async (
 			bondingPeriod.address
 		)
 		const config = await stakingQueryClient.config()
-		const totalStakedBalance = await lpQueryClient.balance({
-			address: bondingPeriod.address
-		})
 
 		let bondingPeriodToReturn: BondingPeriod = {
 			address: bondingPeriod.address,
@@ -45,20 +44,22 @@ export const calculateBondingPeriods = async (
 			localIndex,
 			schedule
 		] of config.distribution_schedule.entries()) {
-			const totalTokenReward = BigNumber(schedule.amount)
-			const tokenReserve = BigNumber(poolInfo.token1_reserve)
-			const totalLPBalance = BigNumber(poolInfo.lp_token_supply)
-			const totalStakeBalance = BigNumber(totalStakedBalance.balance)
-
-			const apr = calculateAPR(
-				totalTokenReward,
-				tokenReserve,
-				totalStakeBalance,
-				totalLPBalance
+			const apr = await calculateAPR(
+				Object.values(config.reward_token[localIndex])[0],
+				schedule.start_time,
+				schedule.end_time,
+				schedule.amount,
+				bondingPeriod.address,
+				config.lp_token_contract,
+				poolInfo,
+				tokenOnePrice,
+				tokenTwoPrice,
+				token1,
+				token2
 			)
 
 			bondingPeriodToReturn.rewards?.push({
-				apr: apr.toNumber(),
+				apr,
 				rewardToken: config.reward_token[localIndex]
 			})
 

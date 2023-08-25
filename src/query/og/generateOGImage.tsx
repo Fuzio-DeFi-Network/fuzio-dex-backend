@@ -203,7 +203,7 @@ export const generateOGImage = async (
 		)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	} catch (error: any) {
-		console.log(`${error.message}`)
+		console.error(`${error.message}`)
 		return new Response(`Failed to generate the image`, {
 			status: 500
 		})

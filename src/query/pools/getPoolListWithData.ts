@@ -4,7 +4,7 @@ import { getBaseTokenPrice } from "@query/price"
 import { cacheManagerInstance } from "@utils/cache"
 import { client } from "@utils/clients/cosmWasmClient"
 import { BigNumber } from "bignumber.js"
-import { calculateHeighestMetrics } from "calculation/calculateHeighestMetrics"
+import { calculateHighestMetrics } from "calculation/calculateHighestMetrics"
 import { calculatePoolData } from "calculation/calculatePoolData"
 import { getPoolInfos } from "calculation/getPoolInfos"
 
@@ -32,7 +32,7 @@ export const getPoolListWithData = async () => {
 			}
 		}
 
-		const baseTokenPrice = await getBaseTokenPrice(client)
+		const baseTokenPrice = await getBaseTokenPrice()
 		const poolInfos = await getPoolInfos(client, poolList)
 		const poolsWithData = await calculatePoolData(
 			poolList,
@@ -40,7 +40,7 @@ export const getPoolListWithData = async () => {
 			baseTokenPrice,
 			client
 		)
-		const { highestApr, highestLiquidity } = await calculateHeighestMetrics(
+		const { highestApr, highestLiquidity } = await calculateHighestMetrics(
 			poolsWithData
 		)
 

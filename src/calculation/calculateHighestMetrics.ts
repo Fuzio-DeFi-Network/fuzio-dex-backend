@@ -1,7 +1,7 @@
 import { type PoolWithData } from "@type/model"
 import { BigNumber } from "bignumber.js"
 
-export const calculateHeighestMetrics = async (
+export const calculateHighestMetrics = async (
 	poolsWithData: PoolWithData[]
 ): Promise<{
 	highestApr: { highestApr: BigNumber; highestAprPool: PoolWithData }
@@ -21,8 +21,8 @@ export const calculateHeighestMetrics = async (
 			highestLiquidity = BigNumber(pool.liquidity.usd)
 		}
 
-		if (pool.highestApr && highestApr.lt(pool.highestApr.highestAprValue)) {
-			highestApr = BigNumber(pool.highestApr.highestAprValue)
+		if (pool.highestAPR && highestApr.lt(pool.highestAPR.highestAprValue)) {
+			highestApr = BigNumber(pool.highestAPR.highestAprValue)
 			highestAprPool = pool
 		}
 	}

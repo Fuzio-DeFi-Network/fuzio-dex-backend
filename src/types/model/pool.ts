@@ -1,4 +1,5 @@
 import { type NestedKeys } from "./generics"
+import { type Token } from "./token"
 import { type Denom } from "@fuzio/contracts/types/FuzioPool.types"
 
 export type Reward = {
@@ -26,6 +27,11 @@ export type Liquidity = {
 	usd?: string
 }
 
+export type HighestAPR = {
+	highestAprToken: Token | undefined
+	highestAprValue: number
+}
+
 export type Pool = {
 	bondingPeriods?: BondingPeriod[]
 	isVerified: boolean
@@ -33,9 +39,9 @@ export type Pool = {
 	swapAddress: string
 }
 
-export type PoolWithData = Pool & {
+export type PoolWithData = {
 	bondingPeriods?: BondingPeriod[]
-	highestApr?: { highestAprToken: Denom | undefined; highestAprValue: number }
+	highestAPR?: HighestAPR
 	isVerified: boolean
 	liquidity: Liquidity & { usd: string }
 	lpTokenAddress: string

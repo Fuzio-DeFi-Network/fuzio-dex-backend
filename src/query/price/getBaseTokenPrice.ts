@@ -1,10 +1,14 @@
-import { type CosmWasmClient } from "@cosmjs/cosmwasm-stargate"
 import { contracts } from "@fuzio/contracts"
 import { type Pool } from "@type/model"
+import { client } from "@utils/clients/cosmWasmClient"
 import { poolListUrl, stablePoolId } from "@utils/constants"
 import { BigNumber } from "bignumber.js"
 
-export const getBaseTokenPrice = async (client: CosmWasmClient) => {
+const {
+	FuzioPool: { FuzioPoolQueryClient }
+} = contracts
+
+export const getBaseTokenPrice = async () => {
 	try {
 		const poolListResponse = await fetch(poolListUrl)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -12,10 +16,6 @@ export const getBaseTokenPrice = async (client: CosmWasmClient) => {
 		const poolList: Pool[] = poolListJson.pools.map((pool: Pool) => {
 			return pool
 		})
-
-		const {
-			FuzioPool: { FuzioPoolQueryClient }
-		} = contracts
 
 		if (poolList.length === 0) {
 			return BigNumber(0)
@@ -25,6 +25,7 @@ export const getBaseTokenPrice = async (client: CosmWasmClient) => {
 			client,
 			poolList[stablePoolId].swapAddress
 		)
+
 		const poolInfo = await poolQueryClient.info()
 
 		const fuzioPrice = BigNumber(poolInfo.token2_reserve).dividedBy(

@@ -1,8 +1,8 @@
 import { staticPlugin } from "@elysiajs/static"
 import { swagger } from "@elysiajs/swagger"
 import { refreshTokenAndPools } from "@query/cache"
+import { refreshData } from "@query/cache/refreshData"
 import { generateOGImage } from "@query/og/generateOGImage"
-import { getBaseTokenPrice } from "@query/price"
 import {
 	type PoolKeys,
 	type PoolWithDataKeys,
@@ -10,8 +10,7 @@ import {
 } from "@type/model"
 import { cacheManagerInstance } from "@utils/cache"
 import { launchStyle } from "@utils/cli/styles"
-import { client } from "@utils/clients/cosmWasmClient"
-// import { cron } from "@utils/helpers"
+import { cron } from "@utils/helpers"
 import { Elysia } from "elysia"
 
 await refreshTokenAndPools()
@@ -41,9 +40,17 @@ const app = new Elysia()
 `
 	)
 	.get("/poolList", () => cacheManagerInstance.getPoolList())
-	.get("/poolData", async () => cacheManagerInstance.getPoolListWithData())
+	.get("/poolDataList", async () => cacheManagerInstance.getPoolListWithData())
 	.get("/tokenList", async () => cacheManagerInstance.getTokenList())
-	.get("/baseTokenPrice", async () => await getBaseTokenPrice(client))
+	.get("/highestApr", async () => cacheManagerInstance.getHighestAPRPool())
+	.get("/highestLiq", async () =>
+		cacheManagerInstance.getHighestLiquidityPool()
+	)
+	.get("/newestPool", async () => cacheManagerInstance.getNewestPool())
+	.get("/price/:denom", async ({ params: { denom } }) => {
+		const decodedDenom = decodeURIComponent(denom)
+		return cacheManagerInstance.getTokenPrice(decodedDenom)
+	})
 	.get("/poolData/:property/:value", async ({ params: { property, value } }) =>
 		cacheManagerInstance.getPoolWithDataByProperty(
 			property as PoolWithDataKeys,
@@ -77,24 +84,26 @@ const app = new Elysia()
 		})
 	)
 	.use(staticPlugin({}))
-	// .use(
-	// 	cron({
-	// 		name: "Refresh Token & Pool List",
-	// 		pattern: "*/5 * * * * *",
-	// 		async run() {
-	// 			await refreshTokenAndPools()
-	// 		}
-	// 	})
-	// )
-	// .use(
-	// 	cron({
-	// 		name: "Refresh Cached Data",
-	// 		pattern: "*/5 * * * * *",
-	// 		async run() {
-	// 			await refreshData()
-	// 		}
-	// 	})
-	// )
+	.use(
+		cron({
+			name: "Refresh Token & Pool List",
+			pattern: "* */3 * * * *",
+			protect: true,
+			async run() {
+				await refreshTokenAndPools()
+			}
+		})
+	)
+	.use(
+		cron({
+			name: "Refresh Cached Data",
+			pattern: "* */1 * * * *",
+			protect: true,
+			async run() {
+				await refreshData()
+			}
+		})
+	)
 	.onError(({ code, set }) => {
 		if (code === "NOT_FOUND") {
 			set.status = 404
@@ -120,8 +129,6 @@ const app = new Elysia()
 		}
 	})
 	.listen(process.env.BUNPORT ?? 3_000)
-
-// eslint-disable-next-line no-console
 
 console.log(
 	launchStyle.Render(

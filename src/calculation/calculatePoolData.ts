@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { calculateBondingPeriods } from "./calculateBondingPeriods"
 import { calculatePoolTokenPrices } from "./calculatePoolTokenPrices"
+import { getHighestApr } from "./getHighestApr"
 import { type CosmWasmClient } from "@cosmjs/cosmwasm-stargate"
 import { CacheManagerError } from "@errors/CacheManagerError"
 import { type InfoResponse } from "@fuzio/contracts/types/FuzioPool.types"
-import { type Pool, type PoolWithData } from "@type/model"
+import { type HighestAPR, type Pool, type PoolWithData } from "@type/model"
 import { cacheManagerInstance } from "@utils/cache"
 import { convertDenomToMicroDenom, convertMicroDenomToDenom } from "@utils/math"
 import { BigNumber } from "bignumber.js"
@@ -49,14 +50,30 @@ export const calculatePoolData = async (
 		const bondingPeriods = await calculateBondingPeriods(
 			client,
 			poolList[index],
-			poolInfo
+			poolInfo,
+			tokenOnePrice,
+			tokenTwoPrice,
+			token1,
+			token2
 		)
+
+		let highestAPR: HighestAPR | undefined = {
+			highestAprToken: undefined,
+			highestAprValue: 0
+		}
+
+		for (const period of bondingPeriods ?? []) {
+			if (period.rewards) {
+				highestAPR = getHighestApr(period.rewards, highestAPR)
+			}
+		}
 
 		const pool = poolList[index]
 
 		const poolWithData: PoolWithData = {
 			...pool,
 			bondingPeriods: bondingPeriods ?? undefined,
+			highestAPR,
 			liquidity: {
 				token1: {
 					amount: poolInfo.token1_reserve,

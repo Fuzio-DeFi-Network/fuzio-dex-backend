@@ -24,13 +24,11 @@ export const getPoolWithData = async (property: PoolKeys, value: string) => {
 			await cacheManagerInstance.updateCachedData()
 		}
 
-		console.log(property, value)
-
 		if (!pool) {
 			throw new Error("Pool not found.")
 		}
 
-		const baseTokenPrice = await getBaseTokenPrice(client)
+		const baseTokenPrice = await getBaseTokenPrice()
 		const poolInfos = await getPoolInfos(client, [pool])
 		const poolWithData = await calculatePoolData(
 			[pool],

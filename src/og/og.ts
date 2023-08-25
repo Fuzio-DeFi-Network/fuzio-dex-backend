@@ -7,7 +7,7 @@ import { type SatoriOptions } from "satori"
 const satoriImport = import("satori")
 const fallbackFont = Bun.file("public/Satoshi-BlackItalic.woff").arrayBuffer()
 
-const isDevelopment = process.env.NODE_ENV === "development"
+const isDevelopment = process.env.NODE_ENV === "DEVELOPMENT"
 
 const languageFontMap = {
 	"ar-AR": "Satoshi+Arabic",
@@ -126,7 +126,7 @@ export const createImageResponse = (
 				fonts: extendedOptions.fonts ?? [
 					{
 						data: fontData,
-						name: "sans serif",
+						name: "Satoshi",
 						style: "normal",
 						weight: 700
 					}

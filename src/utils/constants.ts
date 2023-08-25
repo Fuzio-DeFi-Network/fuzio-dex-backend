@@ -2,7 +2,7 @@ export const poolListUrl = `https://raw.githubusercontent.com/Fuzio-DeFi-Network
 	process.env.SEI_NETWORK === "MAINNET" ? "mainnet/" : "testnet/"
 }poolList.json`
 
-export const tokenListUrl = `https://raw.githubusercontent.com/Fuzio-DeFi-Network/fuzio-assetlist/main/${
+export const tokenListUrl = `https://raw.githubusercontent.com/Fuzio-DeFi-Network/fuzio-assetlist/feat/morePoolDetails/${
 	process.env.SEI_NETWORK === "MAINNET" ? "mainnet/" : "testnet/"
 }tokenList.json`
 

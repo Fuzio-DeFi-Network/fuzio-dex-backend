@@ -18,11 +18,25 @@ import Baobab from "baobab"
 import dayjs from "dayjs"
 
 export type StateTree = {
+	cacheInitialized: boolean
+	highestAPR: PoolWithData | undefined
+	highestLiq: PoolWithData | undefined
 	lastCachedData: number | null
 	lastCachedTokenPool: number | null
 	poolList: Pool[]
 	poolListWithData: PoolWithData[]
 	tokenList: Token[]
+}
+
+const initialState: StateTree = {
+	cacheInitialized: false,
+	highestAPR: undefined,
+	highestLiq: undefined,
+	lastCachedData: null,
+	lastCachedTokenPool: null,
+	poolList: [],
+	poolListWithData: [],
+	tokenList: []
 }
 
 export class CacheManager {
@@ -34,34 +48,45 @@ export class CacheManager {
 
 	private readonly poolListWithDataCursor: Cursor
 
+	private readonly highestAprCursor: Cursor
+
+	private readonly highestLiqCursor: Cursor
+
+	private readonly newestPoolCursor: Cursor
+
 	public constructor() {
-		this.tree = new Baobab(
-			{
-				lastCachedData: null,
-				lastCachedTokenPool: null,
-				poolList: [],
-				poolListWithData: [],
-				tokenList: []
-			},
-			{
-				asynchronous: true,
-				monkeyBusiness: false
-			}
-		)
+		this.tree = new Baobab(initialState, {
+			asynchronous: true,
+			monkeyBusiness: false
+		})
 
 		// Initialize cursors
 		this.tokenListCursor = this.tree.select("tokenList")
 		this.poolListCursor = this.tree.select("poolList")
 		this.poolListWithDataCursor = this.tree.select("poolListWithData")
-		// Event listeners
-		this.initializeEventListeners()
+		this.highestAprCursor = this.tree.select("highestAPR")
+		this.highestLiqCursor = this.tree.select("highestLiq")
+		this.newestPoolCursor = this.tree.select("newestPool")
 
-		console.log(welcomeStyle.Render("State Management Loaded."))
+		// Initialize Event listeners
+		this.initializeEventListeners()
 	}
 
-	// 3. Add getters for poolListWithData
+	// Add getters for poolListWithData
 	public getPoolListWithData = (): PoolWithData[] => {
 		return this.poolListWithDataCursor.get()
+	}
+
+	public getHighestLiquidityPool = (): PoolWithData => {
+		return this.highestLiqCursor.get()
+	}
+
+	public getHighestAPRPool = (): PoolWithData => {
+		return this.highestAprCursor.get()
+	}
+
+	public getNewestPool = (): PoolWithData => {
+		return this.newestPoolCursor.get()
 	}
 
 	public getPoolWithDataByIndex = (index: number): PoolWithData => {
@@ -126,6 +151,20 @@ export class CacheManager {
 		return pool ?? undefined
 	}
 
+	public getAllPoolsWithDataByProperty = (
+		property: PoolWithDataKeys,
+		value: string
+	): PoolWithData[] => {
+		const pools = this.getPoolListWithData()
+
+		// Then, filter out the ones that match the given property and value
+		const matchingPools = pools.filter(
+			(pool) => getNestedValue(pool, property) === value
+		)
+
+		return matchingPools
+	}
+
 	// Token related getters
 	public getTokenByIndex = (index: number): Token => {
 		return this.tokenListCursor.select(index).get()
@@ -141,9 +180,55 @@ export class CacheManager {
 		return token ?? undefined
 	}
 
-	public updateCachedTokensAndPools = async () => {
+	public getTokenPrice = (denom: string): string | undefined => {
+		// Ensure data is available before proceeding
+		if (
+			this.getTimeSinceLastDataCache() === null ||
+			this.getPoolListWithData().length === 0
+		) {
+			return undefined
+		}
+
+		const poolsWithTokenAsOne = this.getAllPoolsWithDataByProperty(
+			"liquidity.token1.denom",
+			denom
+		)
+
+		const poolsWithTokenAsTwo = this.getAllPoolsWithDataByProperty(
+			"liquidity.token2.denom",
+			denom
+		)
+
+		const poolsWithToken = [...poolsWithTokenAsOne, ...poolsWithTokenAsTwo]
+
+		// If no pools have the token, return undefined
+		if (poolsWithToken.length === 0) {
+			return undefined
+		}
+
+		// Find a pool that has the token's price
+		for (const pool of poolsWithToken) {
+			if (
+				pool.liquidity.token1.denom === denom &&
+				pool.liquidity.token1.tokenPrice
+			) {
+				return pool.liquidity.token1.tokenPrice
+			}
+
+			if (
+				pool.liquidity.token2.denom === denom &&
+				pool.liquidity.token2.tokenPrice
+			) {
+				return pool.liquidity.token2.tokenPrice
+			}
+		}
+
+		// If none of the pools had the token's price, return undefined
+		return undefined
+	}
+
+	public fetchTokensAndPools = async () => {
 		try {
-			// Parallel Network Requests
 			const [tokenListResponse, poolListResponse] = await Promise.all([
 				fetch(tokenListUrl),
 				fetch(poolListUrl)
@@ -158,21 +243,46 @@ export class CacheManager {
 			// Update the timestamp after successfully updating the cache
 			this.tree.set("lastCachedTokenPool", Date.now())
 		} catch (error) {
-			// eslint-disable-next-line no-console
-			console.error("An error occurred:", error)
+			console.error("An error occurred while fetching tokens and pools:", error)
 			throw new GeneralError()
+		}
+	}
+
+	public fetchPoolData = async () => {
+		try {
+			const poolsWithData = await getPoolListWithData()
+
+			this.poolListWithDataCursor.set(poolsWithData.pools)
+			this.highestAprCursor.set(poolsWithData.highestApr)
+			this.highestLiqCursor.set(poolsWithData.highestLiquidity)
+			this.newestPoolCursor.set(
+				poolsWithData.pools[poolsWithData.pools.length - 1]
+			)
+
+			// Update the timestamp after successfully updating the cache
+			this.tree.set("lastCachedData", Date.now())
+		} catch (error) {
+			console.error("An error occurred while fetching pool data:", error)
+			throw new GeneralError()
+		}
+	}
+
+	public updateCachedTokensAndPools = async () => {
+		try {
+			await this.fetchTokensAndPools()
+		} catch (error) {
+			console.error("An error occurred in updateCachedTokensAndPools:", error)
+			// You can decide to re-throw or handle it differently here.
 		}
 	}
 
 	public updateCachedData = async () => {
 		try {
-			// Parallel Network Requests
-			const poolsWithData = await getPoolListWithData()
-
-			this.poolListWithDataCursor.set(poolsWithData.pools)
-
-			// Update the timestamp after successfully updating the cache
-			this.tree.set("lastCachedData", Date.now())
+			await this.fetchPoolData()
+			if (!this.tree.select("cacheInitialized").get()) {
+				this.tree.select("cacheInitialized").set(true)
+				await this.fetchPoolData()
+			}
 		} catch (error) {
 			// eslint-disable-next-line no-console
 			console.error("An error occurred:", error)
@@ -181,25 +291,31 @@ export class CacheManager {
 	}
 
 	public getTimeSinceLastTokenAndPoolCache(): number | null {
-		return this.tree.get("lastCachedTokenPool")
+		const lastCachedTime = this.tree.get("lastCachedTokenPool")
+		if (lastCachedTime) {
+			return Date.now() - lastCachedTime
+		}
+
+		return null
 	}
 
 	public getTimeSinceLastDataCache(): number | null {
-		return this.tree.get("lastCachedData")
+		const lastCachedTime = this.tree.get("lastCachedData")
+		if (lastCachedTime) {
+			return Date.now() - lastCachedTime
+		}
+
+		return null
 	}
 
 	private initializeEventListeners() {
-		// Logging Updates to Token and Pool Lists
-		this.tokenListCursor.on("update", () => {
-			console.log(successStyle.Render("Token List Updated!"))
-		})
-
 		this.poolListCursor.on("update", async () => {
 			await refreshData()
-			console.log(successStyle.Render("Pool List Updated!"))
+			console.log(successStyle.Render("Token & Pool List Updated!"))
 		})
 
 		this.poolListWithDataCursor.on("update", () => {
+			this.poolListWithDataCursor.get()
 			console.log(successStyle.Render("Pool Data Updated!"))
 		})
 
@@ -221,6 +337,10 @@ export class CacheManager {
 					).unix()}`
 				)
 			)
+		})
+
+		this.tree.select("cacheInitialized").on("update", async () => {
+			console.log(welcomeStyle.Render("State Management Loaded."))
 		})
 	}
 }
