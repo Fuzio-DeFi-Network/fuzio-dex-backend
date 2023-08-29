@@ -11,6 +11,8 @@ const {
 	Cw20: { Cw20QueryClient }
 } = contracts
 
+const BLOCKS_PER_YEAR = 78_840_000
+
 export const calculateAPR = async (
 	rewardDenom: string,
 	startTime: number,
@@ -25,7 +27,6 @@ export const calculateAPR = async (
 	token2: Token
 ) => {
 	try {
-		const BLOCKS_PER_YEAR = 78_840_000
 		const rewardTokenPrice = cacheManagerInstance.getTokenPrice(rewardDenom)
 
 		// REWARD_PER_BLOCK = Number of tokens your farming contract gives out per block
@@ -36,8 +37,8 @@ export const calculateAPR = async (
 		).decimalPlaces(0, 1)
 
 		const totalRewardPricePerYear = new BigNumber(rewardTokenPrice ?? "0")
-			.times(REWARD_PER_BLOCK)
-			.times(BLOCKS_PER_YEAR)
+			.multipliedBy(REWARD_PER_BLOCK)
+			.multipliedBy(BLOCKS_PER_YEAR)
 
 		// Get Total LP Tokens Deposited in Farming Contract
 		const LpToken = new Cw20QueryClient(client, lpTokenAddress)
@@ -60,14 +61,14 @@ export const calculateAPR = async (
 		})
 
 		// Calculate Total Price Of LP Tokens in Contract
-		const totalPriceOfLpTokensInFarmingContract = new BigNumber(
-			lpTokenPrice
-		).times(totalLPStakedInFarmingContract.balance)
+		const totalPriceOfLpTokensInFarmingContract = lpTokenPrice.times(
+			totalLPStakedInFarmingContract.balance
+		)
 
 		// Calculate APR
 		const apr = totalRewardPricePerYear
-			.div(totalPriceOfLpTokensInFarmingContract)
-			.times(100)
+			.dividedBy(totalPriceOfLpTokensInFarmingContract)
+			.multipliedBy(100)
 
 		return apr.isNaN() || !apr.isFinite() ? 0 : apr.toNumber()
 	} catch (error) {

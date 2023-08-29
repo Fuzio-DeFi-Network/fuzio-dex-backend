@@ -87,44 +87,55 @@ const app = new Elysia()
 	.use(
 		cron({
 			name: "Refresh Token & Pool List",
-			pattern: "* */3 * * * *",
+			pattern: "0 */5 * * * *",
 			protect: true,
 			async run() {
+				console.log("Starting cron job: Refresh Token & Pool List")
 				await refreshTokenAndPools()
+				console.log("Finished cron job: Refresh Token & Pool List")
 			}
 		})
 	)
 	.use(
 		cron({
 			name: "Refresh Cached Data",
-			pattern: "* */1 * * * *",
+			pattern: "0 * * * * *",
 			protect: true,
 			async run() {
+				console.log("Starting cron job: Refresh Cached Data")
 				await refreshData()
+				console.log("Finished cron job: Refresh Cached Data")
 			}
 		})
 	)
 	.onError(({ code, set }) => {
+		console.error(`Error Code: ${code}`)
+
 		if (code === "NOT_FOUND") {
 			set.status = 404
 			return "Route Not Found :("
 		}
 
 		if (code === "VALIDATION") {
+			console.error("Validation error occurred.")
 			return "Validation Error :("
 		}
 
 		if (code === "INTERNAL_SERVER_ERROR") {
+			console.error("Internal server error occurred.")
 			return "Internal Server Error :("
 		}
 
 		if (code === "PARSE") {
+			console.error("Parsing error occurred.")
 			return "Parsing Error :("
 		}
 
 		if (code === "UNKNOWN") {
+			console.error("Unknown error occurred.")
 			return "Unknown Error :("
 		} else {
+			console.error("Unknown error occurred.")
 			return "Unknown Error :("
 		}
 	})

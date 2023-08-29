@@ -8,13 +8,13 @@ import { calculateHighestMetrics } from "calculation/calculateHighestMetrics"
 import { calculatePoolData } from "calculation/calculatePoolData"
 import { getPoolInfos } from "calculation/getPoolInfos"
 
-export const getPoolListWithData = async () => {
-	BigNumber.config({
-		DECIMAL_PLACES: 18,
-		EXPONENTIAL_AT: 18,
-		ROUNDING_MODE: 1
-	})
+BigNumber.config({
+	DECIMAL_PLACES: 18,
+	EXPONENTIAL_AT: 18,
+	ROUNDING_MODE: 1
+})
 
+export const getPoolListWithData = async () => {
 	try {
 		// Use CacheManager to get the pool and token lists
 		const poolList = cacheManagerInstance.getPoolList()
