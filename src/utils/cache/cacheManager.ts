@@ -12,7 +12,6 @@ import {
 import { type PoolListResponse, type TokenListResponse } from "@type/response"
 import { logStyle, successStyle, welcomeStyle } from "@utils/cli/styles"
 import { poolListUrl, tokenListUrl } from "@utils/constants"
-import { fetchWithRetry } from "@utils/helpers/fetchWithRetry"
 import { getNestedValue } from "@utils/helpers/getNestedValue"
 import { type Cursor } from "baobab"
 import Baobab from "baobab"
@@ -231,8 +230,8 @@ export class CacheManager {
 	public fetchTokensAndPools = async () => {
 		try {
 			const [tokenListResponse, poolListResponse] = await Promise.all([
-				fetchWithRetry(tokenListUrl),
-				fetchWithRetry(poolListUrl)
+				fetch(tokenListUrl),
+				fetch(poolListUrl)
 			])
 
 			const tokenListJson: TokenListResponse = await tokenListResponse.json()
